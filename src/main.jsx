@@ -50,6 +50,23 @@ const patients = [
 ];
 
 function App() {
+
+
+function getEvidenceLabel(source) {
+  const labels = {
+    "patient.vitals[0].value": "Latest blood pressure reading",
+    "patient.vitals[1].value": "Latest heart rate reading",
+    "patient.vitals[2].value": "Latest blood glucose reading",
+    "patient.missedReadings": "Missed readings",
+    "patient.medications[0].detail": "Lisinopril medication record",
+    "patient.medications[1].detail": "Metformin medication record",
+    "patient.notes[0].text": "Previous care note",
+    "patient.notes[1].text": "Previous patient question"
+  };
+
+  return labels[source] || "Patient record";
+}
+
   const [selectedId, setSelectedId] = useState("pt-1042");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -115,8 +132,8 @@ function App() {
           {result && <div className="results">
             <div className="result-meta"><span className="generated"><CheckCircle2 size={15}/> Brief generated</span><span className="mode-label">{result.mode === "ai" ? "AI-GENERATED" : "DEMO MODE"}</span></div>
             <section className="result-card summary-card"><div className="result-heading"><span className="result-icon green-bg"><Sparkles size={17}/></span><div><h4>Patient summary</h4><small>Concise overview of supplied records</small></div></div><p className="summary-text">{result.summary}</p></section>
-            <section className="result-card"><div className="result-heading"><span className="result-icon amber-bg"><AlertCircle size={17}/></span><div><h4>Changes and items to review</h4><small>Observations linked to the available record</small></div></div><div className="change-list">{(result.changes || []).map((c,i) => <div className="change-row" key={i}><div className="change-bullet"/><div className="change-body"><div className="change-title">{c.title}<span className="source-chip">{c.source}</span></div><p>{c.detail}</p></div></div>)}</div></section>
-            <section className="result-card"><div className="result-heading"><span className="result-icon blue-bg"><MessageCircle size={17}/></span><div><h4>Suggested questions</h4><small>Conversation prompts for care manager review</small></div></div><div className="question-list">{(result.questions || []).map((q,i) => <div className="question-row" key={i}><div className="question-number">{String(i+1).padStart(2,"0")}</div><div className="question-body"><strong>{q.question}</strong><p>{q.reason}</p><small>Context: {q.source}</small></div><button className={`check-button ${done.includes(i) ? "checked" : ""}`} onClick={() => setDone(old => old.includes(i) ? old.filter(x=>x!==i) : [...old,i])} title="Mark as reviewed"><CheckCircle2 size={18}/></button></div>)}</div></section>
+            <section className="result-card"><div className="result-heading"><span className="result-icon amber-bg"><AlertCircle size={17}/></span><div><h4>Changes and items to review</h4><small>Observations linked to the available record</small></div></div><div className="change-list">{(result.changes || []).map((c,i) => <div className="change-row" key={i}><div className="change-bullet"/><div className="change-body"><div className="change-title">{c.title}<span className="source-chip">{getEvidenceLabel(c.source)}</span></div><p>{c.detail}</p></div></div>)}</div></section>
+            <section className="result-card"><div className="result-heading"><span className="result-icon blue-bg"><MessageCircle size={17}/></span><div><h4>Suggested questions</h4><small>Conversation prompts for care manager review</small></div></div><div className="question-list">{(result.questions || []).map((q,i) => <div className="question-row" key={i}><div className="question-number">{String(i+1).padStart(2,"0")}</div><div className="question-body"><strong>{q.question}</strong><p>{q.reason}</p><small>Evidence: {getEvidenceLabel(q.source)}</small></div><button className={`check-button ${done.includes(i) ? "checked" : ""}`} onClick={() => setDone(old => old.includes(i) ? old.filter(x=>x!==i) : [...old,i])} title="Mark as reviewed"><CheckCircle2 size={18}/></button></div>)}</div></section>
             <section className="result-card"><div className="result-heading"><span className="result-icon purple-bg"><ShieldCheck size={17}/></span><div><h4>Confirm before the call</h4><small>Human review checklist</small></div></div><div className="verify-list">{(result.verify || []).map((v,i) => <label key={i}><input type="checkbox"/><span>{v}</span></label>)}</div></section>
             <div className="disclaimer"><ShieldCheck size={16}/><span>{result.disclaimer || "AI-generated preparation is for human review only. Follow your organisation's clinical protocols."}</span></div>
             <button className="outline-button" onClick={prepareCall}><Sparkles size={15}/> Regenerate brief</button>
