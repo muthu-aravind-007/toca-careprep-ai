@@ -84,8 +84,23 @@ function getEvidenceLabel(source) {
     setLoading(true); setError(""); setResult(null); setTab("brief");
     try {
       const response = await fetch("/api/prepare-call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patient }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not prepare call.");
+      const responseText = await response.text();
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          `API returned an invalid response (${response.status}): ${
+            responseText || "Empty response"
+          }`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not prepare call.");
+      }
+
       setResult(data);
     } catch (e) {
       setError("The preparation service is not reachable. If you're viewing this on Vercel, check the deployment logs and API configuration. " + e.message);
