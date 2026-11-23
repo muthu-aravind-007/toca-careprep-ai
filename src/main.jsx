@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
+import { patients } from "./patients.js";
 import { createRoot } from "react-dom/client";
 import { Activity, AlertCircle, ArrowUpRight, Bell, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, Clock3, FileText, HeartPulse, LayoutDashboard, Menu, MessageCircle, Pill, Search, ShieldCheck, Sparkles, UserRound, Users, X, Zap } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import "./styles.css";
 
-const patients = [
+const patient = [
   {
     id: "pt-1042", name: "Sarah Johnson", initials: "SJ", age: 62, gender: "Female", status: "Needs review",
     program: "Remote patient monitoring", clinician: "Care Team North", lastContact: "Nov 14, 2026",
@@ -51,21 +52,22 @@ const patients = [
 
 function App() {
 
+  const MODE_LABEL = { ai: "AI-GENERATED · GROQ", fallback: "RULE-BASED FALLBACK", safety: "SAFETY GATE" };
 
-function getEvidenceLabel(source) {
-  const labels = {
-    "patient.vitals[0].value": "Latest blood pressure reading",
-    "patient.vitals[1].value": "Latest heart rate reading",
-    "patient.vitals[2].value": "Latest blood glucose reading",
-    "patient.missedReadings": "Missed readings",
-    "patient.medications[0].detail": "Lisinopril medication record",
-    "patient.medications[1].detail": "Metformin medication record",
-    "patient.notes[0].text": "Previous care note",
-    "patient.notes[1].text": "Previous patient question"
-  };
+  function Evidence({ ids = [], evidence = {} }) {
+    if (!ids.length) return null;
+    return <div className="evidence-row">{ids.map(id =>
+      <span key={id} className="source-chip" title={evidence[id]?.text}>{id} · {evidence[id]?.label || "Record"}</span>)}</div>;
+  }
 
-  return labels[source] || "Patient record";
-}
+  function Pipeline({ steps = [] }) {
+    return <div className="pipeline">{steps.map((s, i) =>
+      <div key={s.key} className={`pipe-step ${s.status}`}>
+        <span className="pipe-dot">{i + 1}</span>
+        <div><strong>{s.label}</strong>
+          <small>{s.status === "failed" ? "Fallback used" : s.status === "skipped" ? "Skipped" : s.status === "pending" ? "Awaiting you" : `${s.ms} ms`}</small></div>
+      </div>)}</div>;
+  }
 
   const [selectedId, setSelectedId] = useState("pt-1042");
   const [result, setResult] = useState(null);
@@ -83,7 +85,7 @@ function getEvidenceLabel(source) {
   async function prepareCall() {
     setLoading(true); setError(""); setResult(null); setTab("brief");
     try {
-      const response = await fetch("/api/prepare-call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patient }) });
+      const response = await fetch("/api/prepare-call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patientId: patient.id }) });
       const responseText = await response.text();
 
       let data;
