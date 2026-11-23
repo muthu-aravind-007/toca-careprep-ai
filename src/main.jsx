@@ -5,69 +5,30 @@ import { Activity, AlertCircle, ArrowUpRight, Bell, CalendarDays, CheckCircle2, 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import "./styles.css";
 
-const patient = [
-  {
-    id: "pt-1042", name: "Sarah Johnson", initials: "SJ", age: 62, gender: "Female", status: "Needs review",
-    program: "Remote patient monitoring", clinician: "Care Team North", lastContact: "Nov 14, 2026",
-    conditions: ["Hypertension", "Type 2 diabetes"],
-    vitals: [
-      { label: "Blood pressure", value: "148/92 mmHg", previous: "132/84 mmHg", date: "Nov 17, 2026", numeric: 148 },
-      { label: "Heart rate", value: "78 bpm", previous: "76 bpm", date: "Nov 17, 2026", numeric: 78 },
-      { label: "Blood glucose", value: "142 mg/dL", previous: "136 mg/dL", date: "Nov 17, 2026", numeric: 142 }
-    ],
-    missedReadings: 2,
-    medications: [{ name: "Lisinopril", detail: "Medication list updated 5 days ago; confirm current dose and schedule with patient." }, { name: "Metformin", detail: "Listed in the sample medication record; confirm current use." }],
-    notes: [
-      { date: "Nov 14, 2026", title: "Care manager check-in", text: "Patient mentioned difficulty maintaining a consistent medication schedule." },
-      { date: "Nov 10, 2026", title: "Monitoring follow-up", text: "Reviewed home monitoring routine. Patient had questions about submitting readings." },
-      { date: "Nov 05, 2026", title: "Routine outreach", text: "Patient reports continuing home monitoring." }
-    ],
-    trend: [{ day: "Nov 11", bp: 132 }, { day: "Nov 12", bp: 134 }, { day: "Nov 13", bp: 136 }, { day: "Nov 14", bp: 139 }, { day: "Nov 15", bp: 141 }, { day: "Nov 16", bp: 145 }, { day: "Nov 17", bp: 148 }]
-  },
-  {
-    id: "pt-1088", name: "Michael Chen", initials: "MC", age: 57, gender: "Male", status: "On track",
-    program: "Chronic care management", clinician: "Care Team West", lastContact: "Nov 16, 2026",
-    conditions: ["Type 2 diabetes"], vitals: [
-      { label: "Blood pressure", value: "126/80 mmHg", previous: "128/82 mmHg", date: "Nov 17, 2026" },
-      { label: "Heart rate", value: "72 bpm", previous: "74 bpm", date: "Nov 17, 2026" },
-      { label: "Blood glucose", value: "118 mg/dL", previous: "121 mg/dL", date: "Nov 17, 2026" }
-    ], missedReadings: 0,
-    medications: [{ name: "Metformin", detail: "No medication changes recorded in the supplied sample." }],
-    notes: [{ date: "Nov 16, 2026", title: "Weekly check-in", text: "Patient reports no issues with monitoring routine." }, { date: "Nov 09, 2026", title: "Care note", text: "Discussed keeping a consistent daily log." }],
-    trend: [{ day: "Nov 11", bp: 130 }, { day: "Nov 12", bp: 129 }, { day: "Nov 13", bp: 128 }, { day: "Nov 14", bp: 127 }, { day: "Nov 15", bp: 127 }, { day: "Nov 16", bp: 128 }, { day: "Nov 17", bp: 126 }]
-  },
-  {
-    id: "pt-1120", name: "Elena Rodriguez", initials: "ER", age: 71, gender: "Female", status: "Follow-up",
-    program: "Remote patient monitoring", clinician: "Care Team South", lastContact: "Nov 12, 2026",
-    conditions: ["Heart failure", "Hypertension"], vitals: [
-      { label: "Blood pressure", value: "138/86 mmHg", previous: "136/84 mmHg", date: "Nov 17, 2026" },
-      { label: "Heart rate", value: "82 bpm", previous: "80 bpm", date: "Nov 17, 2026" },
-      { label: "Weight", value: "72.4 kg", previous: "71.8 kg", date: "Nov 17, 2026" }
-    ], missedReadings: 1,
-    medications: [{ name: "Medication reconciliation", detail: "Patient-reported list requires confirmation during next contact." }],
-    notes: [{ date: "Nov 12, 2026", title: "Patient outreach", text: "Patient requested a follow-up call to review home monitoring." }, { date: "Nov 08, 2026", title: "Monitoring note", text: "One scheduled weight reading not received." }],
-    trend: [{ day: "Nov 11", bp: 132 }, { day: "Nov 12", bp: 133 }, { day: "Nov 13", bp: 134 }, { day: "Nov 14", bp: 135 }, { day: "Nov 15", bp: 136 }, { day: "Nov 16", bp: 137 }, { day: "Nov 17", bp: 138 }]
-  }
-];
+const MODE_LABEL = { ai: "AI-GENERATED · GROQ", fallback: "RULE-BASED FALLBACK", safety: "SAFETY GATE" };
+
+const SUMMARY_LABEL = {
+  ai: "AI-generated draft, validated against recorded facts",
+  fallback: "Rule-based preparation, validated against recorded facts",
+  safety: "Safety escalation — AI preparation skipped",
+};
+
+function Evidence({ ids = [], evidence = {} }) {
+  if (!ids.length) return null;
+  return <div className="evidence-row">{ids.map(id =>
+    <span key={id} className="source-chip" title={evidence[id]?.text}>{id} · {evidence[id]?.label || "Record"}</span>)}</div>;
+}
+
+function Pipeline({ steps = [] }) {
+  return <div className="pipeline">{steps.map((s, i) =>
+    <div key={s.key} className={`pipe-step ${s.status}`}>
+      <span className="pipe-dot">{i + 1}</span>
+      <div><strong>{s.label}</strong>
+        <small>{s.status === "failed" ? "Fallback used" : s.status === "skipped" ? "Skipped" : s.status === "pending" ? "Awaiting you" : `${s.ms} ms`}</small></div>
+    </div>)}</div>;
+}
 
 function App() {
-
-  const MODE_LABEL = { ai: "AI-GENERATED · GROQ", fallback: "RULE-BASED FALLBACK", safety: "SAFETY GATE" };
-
-  function Evidence({ ids = [], evidence = {} }) {
-    if (!ids.length) return null;
-    return <div className="evidence-row">{ids.map(id =>
-      <span key={id} className="source-chip" title={evidence[id]?.text}>{id} · {evidence[id]?.label || "Record"}</span>)}</div>;
-  }
-
-  function Pipeline({ steps = [] }) {
-    return <div className="pipeline">{steps.map((s, i) =>
-      <div key={s.key} className={`pipe-step ${s.status}`}>
-        <span className="pipe-dot">{i + 1}</span>
-        <div><strong>{s.label}</strong>
-          <small>{s.status === "failed" ? "Fallback used" : s.status === "skipped" ? "Skipped" : s.status === "pending" ? "Awaiting you" : `${s.ms} ms`}</small></div>
-      </div>)}</div>;
-  }
 
   const [selectedId, setSelectedId] = useState("pt-1042");
   const [result, setResult] = useState(null);
@@ -147,12 +108,53 @@ function App() {
           {loading && <div className="loading-state"><div className="spinner"/><h3>Preparing patient context...</h3><p>Organising the available records and generating a structured call brief.</p></div>}
           {error && <div className="error-box"><AlertCircle size={18}/><span>{error}</span></div>}
           {result && <div className="results">
-            <div className="result-meta"><span className="generated"><CheckCircle2 size={15}/> Brief generated</span><span className="mode-label">{result.mode === "ai" ? "AI-GENERATED" : "DEMO MODE"}</span></div>
-            <section className="result-card summary-card"><div className="result-heading"><span className="result-icon green-bg"><Sparkles size={17}/></span><div><h4>Patient summary</h4><small>Concise overview of supplied records</small></div></div><p className="summary-text">{result.summary}</p></section>
-            <section className="result-card"><div className="result-heading"><span className="result-icon amber-bg"><AlertCircle size={17}/></span><div><h4>Changes and items to review</h4><small>Observations linked to the available record</small></div></div><div className="change-list">{(result.changes || []).map((c,i) => <div className="change-row" key={i}><div className="change-bullet"/><div className="change-body"><div className="change-title">{c.title}<span className="source-chip">{getEvidenceLabel(c.source)}</span></div><p>{c.detail}</p></div></div>)}</div></section>
-            <section className="result-card"><div className="result-heading"><span className="result-icon blue-bg"><MessageCircle size={17}/></span><div><h4>Suggested questions</h4><small>Conversation prompts for care manager review</small></div></div><div className="question-list">{(result.questions || []).map((q,i) => <div className="question-row" key={i}><div className="question-number">{String(i+1).padStart(2,"0")}</div><div className="question-body"><strong>{q.question}</strong><p>{q.reason}</p><small>Evidence: {getEvidenceLabel(q.source)}</small></div><button className={`check-button ${done.includes(i) ? "checked" : ""}`} onClick={() => setDone(old => old.includes(i) ? old.filter(x=>x!==i) : [...old,i])} title="Mark as reviewed"><CheckCircle2 size={18}/></button></div>)}</div></section>
-            <section className="result-card"><div className="result-heading"><span className="result-icon purple-bg"><ShieldCheck size={17}/></span><div><h4>Confirm before the call</h4><small>Human review checklist</small></div></div><div className="verify-list">{(result.verify || []).map((v,i) => <label key={i}><input type="checkbox"/><span>{v}</span></label>)}</div></section>
-            <div className="disclaimer"><ShieldCheck size={16}/><span>{result.disclaimer || "AI-generated preparation is for human review only. Follow your organisation's clinical protocols."}</span></div>
+            <div className="result-meta"><span className="generated"><CheckCircle2 size={15}/> Brief generated</span><span className="mode-label">{MODE_LABEL[result.mode] || "DEMO MODE"}</span></div>
+            <Pipeline steps={result.pipeline}/>
+
+            <section className="result-card summary-card"><div className="result-heading"><span className="result-icon green-bg"><Sparkles size={17}/></span><div><h4>Patient summary</h4><small>{SUMMARY_LABEL[result.mode] || "Preparation based on recorded facts"}</small></div></div><p className="summary-text">{result.summary}</p></section>
+
+            <section className="result-card"><div className="result-heading"><span className="result-icon amber-bg"><AlertCircle size={17}/></span><div><h4>Changes and items to review</h4><small>Each item cites the record facts it is based on</small></div></div>
+              <div className="change-list">{(result.changes || []).map((c, i) => <div className="change-row" key={i}><div className="change-bullet"/><div className="change-body">
+                <div className="change-title">{c.title}{c.priority === "high" && <span className="pill pill-amber">High priority</span>}</div>
+                <p>{c.detail}</p>
+                <Evidence ids={c.evidence_ids} evidence={result.evidence}/>
+              </div></div>)}</div></section>
+
+            <section className="result-card"><div className="result-heading"><span className="result-icon blue-bg"><MessageCircle size={17}/></span><div><h4>Suggested questions</h4><small>Conversation prompts for care manager review</small></div></div>
+              <div className="question-list">{(result.questions || []).map((q, i) => <div className="question-row" key={i}>
+                <div className="question-number">{String(i + 1).padStart(2, "0")}</div>
+                <div className="question-body"><strong>{q.question}</strong><p>{q.reason}</p><Evidence ids={q.evidence_ids} evidence={result.evidence}/></div>
+                <button className={`check-button ${done.includes(i) ? "checked" : ""}`} onClick={() => setDone(old => old.includes(i) ? old.filter(x => x !== i) : [...old, i])} title="Mark as reviewed"><CheckCircle2 size={18}/></button>
+              </div>)}</div></section>
+
+            <section className="result-card"><div className="result-heading"><span className="result-icon purple-bg"><ShieldCheck size={17}/></span><div><h4>Confirm before the call</h4><small>Human review checklist</small></div></div>
+              <div className="verify-list">
+                {(result.verify || []).map((v, i) => (
+                  <div className="verify-item" key={i}>
+                    <label>
+                      <input type="checkbox" />
+                      <span>{typeof v === "string" ? v : v.text}</span>
+                    </label>
+                    {typeof v === "object" && (
+                      <Evidence ids={v.evidence_ids} evidence={result.evidence} />
+                    )}
+                  </div>
+                ))}
+              </div></section>
+
+            <section className="result-card"><details>
+              <summary className="facts-summary"><strong>Recorded facts used</strong> <small>Computed from the record, not generated by AI</small></summary>
+              <div className="facts-list">{(result.facts || []).map(f => <div key={f.id} className="fact-row"><span className="fact-id">{f.id}</span><div><strong>{f.label}</strong><p>{f.text}</p></div></div>)}</div>
+            </details></section>
+
+            <div className="disclaimer">
+              <ShieldCheck size={16}/>
+              <span>
+                {result.mode === "fallback"
+                  ? "Rule-based preparation is for human review only. It does not diagnose or recommend treatment. Follow your organisation's clinical protocols."
+                  : result.disclaimer}
+              </span>
+            </div>
             <button className="outline-button" onClick={prepareCall}><Sparkles size={15}/> Regenerate brief</button>
           </div>}
         </section>}
